@@ -1,3 +1,4 @@
+Set-Content -Path .github/workflows/ci.yml -Value @"
 name: CI/CD Pipeline - ECR and EKS
 
 on:
@@ -9,7 +10,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ github.sha }}
+      image_tag: \${{ github.sha }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -17,9 +18,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: \${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: \${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: \${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -27,23 +28,23 @@ jobs:
 
       - name: Build and Push Frontend Image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_FRONTEND_REPO }}
-          IMAGE_TAG: ${{ github.sha }}
+          ECR_REGISTRY: \${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: \${{ secrets.ECR_FRONTEND_REPO }}
+          IMAGE_TAG: \${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./application/frontend
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker build -t \$ECR_REGISTRY/\$ECR_REPOSITORY:\$IMAGE_TAG -t \$ECR_REGISTRY/\$ECR_REPOSITORY:latest ./application/frontend
+          docker push \$ECR_REGISTRY/\$ECR_REPOSITORY:\$IMAGE_TAG
+          docker push \$ECR_REGISTRY/\$ECR_REPOSITORY:latest
 
       - name: Build and Push Backend Image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_BACKEND_REPO }}
-          IMAGE_TAG: ${{ github.sha }}
+          ECR_REGISTRY: \${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: \${{ secrets.ECR_BACKEND_REPO }}
+          IMAGE_TAG: \${{ github.sha }}
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./application/backend
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker build -t \$ECR_REGISTRY/\$ECR_REPOSITORY:\$IMAGE_TAG -t \$ECR_REGISTRY/\$ECR_REPOSITORY:latest ./application/backend
+          docker push \$ECR_REGISTRY/\$ECR_REPOSITORY:\$IMAGE_TAG
+          docker push \$ECR_REGISTRY/\$ECR_REPOSITORY:latest
 
   deploy:
     runs-on: ubuntu-latest
@@ -56,21 +57,22 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: \${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: \${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: \${{ secrets.AWS_REGION }}
 
       - name: Update Kubeconfig
         run: |
-          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
+          aws eks update-kubeconfig --region \${{ secrets.AWS_REGION }} --name \${{ secrets.EKS_CLUSTER_NAME }}
 
       - name: Deploy to EKS
         env:
-          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          ECR_REGISTRY: \${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.\${{ secrets.AWS_REGION }}.amazonaws.com
+          IMAGE_TAG: \${{ needs.build-and-push.outputs.image_tag }}
         run: |
-          kubectl set image deployment/frontend-deployment frontend-container=$ECR_REGISTRY/${{ secrets.ECR_FRONTEND_REPO }}:$IMAGE_TAG
-          kubectl set image deployment/backend-deployment backend-container=$ECR_REGISTRY/${{ secrets.ECR_BACKEND_REPO }}:$IMAGE_TAG
+          kubectl set image deployment/frontend-deployment frontend-container=\$ECR_REGISTRY/\${{ secrets.ECR_FRONTEND_REPO }}:\$IMAGE_TAG
+          kubectl set image deployment/backend-deployment backend-container=\$ECR_REGISTRY/\${{ secrets.ECR_BACKEND_REPO }}:\$IMAGE_TAG
           
           kubectl rollout status deployment/frontend-deployment
           kubectl rollout status deployment/backend-deployment
+"@
