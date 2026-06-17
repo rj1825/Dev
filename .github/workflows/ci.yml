@@ -75,4 +75,4 @@ jobs:
           
           kubectl rollout status deployment/frontend-deployment
           kubectl rollout status deployment/backend-deployment
-"@
+"@# Fresh trigger run
