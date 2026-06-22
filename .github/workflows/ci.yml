@@ -70,9 +70,20 @@ jobs:
           cd terraform
           terraform init -upgrade
 
+      - name: Get Runner IP
+        id: ip
+        run: |
+          PUBLIC_IP=$(curl -s https://api.ipify.org)
+          echo "runner_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+
+      - name: Dynamically Authorize Runner IP in Security Group
+        run: |
+          SG_ID=$(aws eks describe-cluster --name three-tier-eks-cluster --region ${{ secrets.AWS_REGION }} --query "cluster.resourcesVpcConfig.clusterSecurityGroupId" --output text)
+          aws ec2 authorize-security-group-ingress --group-id $SG_ID --protocol tcp --port 443 --cidr ${{ steps.ip.outputs.runner_ip }}/32 --region ${{ secrets.AWS_REGION }} || echo "Rule might already exist"
+
       - name: Update Kubeconfig
         run: |
-          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name three-tier-eks-cluster
 
       - name: Deploy to EKS
         env:
@@ -80,7 +91,13 @@ jobs:
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
         run: |
           kubectl set image deployment/frontend-deployment frontend-container=$ECR_REGISTRY/${{ secrets.ECR_FRONTEND_REPO }}:$IMAGE_TAG
-          kubectl set image deployment/backend-deployment backend-container=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_BACKEND_REPO }}:$IMAGE_TAG
+          kubectl set image deployment/backend-deployment backend-container=$ECR_REGISTRY/${{ secrets.ECR_BACKEND_REPO }}:$IMAGE_TAG
           
           kubectl rollout status deployment/frontend-deployment
           kubectl rollout status deployment/backend-deployment
+
+      - name: Clean Up Runner IP Rule (Always Executes)
+        if: always()
+        run: |
+          SG_ID=$(aws eks describe-cluster --name three-tier-eks-cluster --region ${{ secrets.AWS_REGION }} --query "cluster.resourcesVpcConfig.clusterSecurityGroupId" --output text)
+          aws ec2 revoke-security-group-ingress --group-id $SG_ID --protocol tcp --port 443 --cidr ${{ steps.ip.outputs.runner_ip }}/32 --region ${{ secrets.AWS_REGION }} || echo "Nothing to clean up"
