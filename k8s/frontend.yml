@@ -4,20 +4,20 @@ metadata:
   name: frontend-deployment
   labels:
     app: frontend
-Spec:
-  Replicas: 2
-  Selector:
-    MatchLabels:
-      App: frontend
-  Template:
-    Metadata:
-      Labels:
-        App: frontend
-    Spec:
-      Containers:
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
       - name: frontend-container
-        Image: placeholder:latest # The pipeline will overwrite this automatically
-        Ports:
+        image: placeholder:latest
+        ports:
         - containerPort: 3000
 ---
 apiVersion: v1
@@ -25,9 +25,9 @@ kind: Service
 metadata:
   name: frontend-service
 spec:
-  Type: LoadBalancer
-  Ports:
+  type: LoadBalancer
+  ports:
   - port: 80
-    TargetPort: 3000
-  Selector:
-    App: frontend
+    targetPort: 3000
+  selector:
+    app: frontend
