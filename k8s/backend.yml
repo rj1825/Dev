@@ -19,6 +19,9 @@ spec:
         image: placeholder:latest
         ports:
         - containerPort: 5000
+        env:
+        - name: DATABASE_URL
+          value: postgres://myuser:mysecurepassword@postgres-service:5432/mydb
 ---
 apiVersion: v1
 kind: Service

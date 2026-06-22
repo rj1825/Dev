@@ -86,7 +86,6 @@ jobs:
           aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name three-tier-eks-cluster
 
       - name: Deploy to EKS
-        - name: Deploy to EKS
         env:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
@@ -112,3 +111,9 @@ jobs:
           echo "=== Rollout Verification ==="
           kubectl rollout status deployment/frontend-deployment
           kubectl rollout status deployment/backend-deployment
+
+      - name: Revoke Runner IP from Security Group
+        if: always()
+        run: |
+          SG_ID=$(aws eks describe-cluster --name three-tier-eks-cluster --region ${{ secrets.AWS_REGION }} --query "cluster.resourcesVpcConfig.clusterSecurityGroupId" --output text)
+          aws ec2 revoke-security-group-ingress --group-id $SG_ID --protocol tcp --port 443 --cidr ${{ steps.ip.outputs.runner_ip }}/32 --region ${{ secrets.AWS_REGION }} || echo "Rule might not exist"
