@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: backend
+spec:
+  Replicas: 2
+  Selector:
+    MatchLabels:
+      App: backend
+  Template:
+    Metadata:
+      Labels:
+        App: backend
+    Spec:
+      Containers:
+      - name: backend-container
+        Image: placeholder:latest # The pipeline will overwrite this automatically
+        Ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  Type: ClusterIP
+  Ports:
+  - port: 5000
+    TargetPort: 5000
+  Selector:
+    App: backend

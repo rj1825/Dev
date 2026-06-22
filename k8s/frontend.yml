@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  labels:
+    app: frontend
+Spec:
+  Replicas: 2
+  Selector:
+    MatchLabels:
+      App: frontend
+  Template:
+    Metadata:
+      Labels:
+        App: frontend
+    Spec:
+      Containers:
+      - name: frontend-container
+        Image: placeholder:latest # The pipeline will overwrite this automatically
+        Ports:
+        - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  Type: LoadBalancer
+  Ports:
+  - port: 80
+    TargetPort: 3000
+  Selector:
+    App: frontend
