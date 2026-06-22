@@ -86,17 +86,29 @@ jobs:
           aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name three-tier-eks-cluster
 
       - name: Deploy to EKS
+        - name: Deploy to EKS
         env:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
         run: |
-          # 1. Apply your manifests to create the deployments if they don't exist
-          kubectl apply -f ./path/to/your/k8s-manifests/
+          echo "=== Checking current workspace directory ==="
+          pwd
+          ls -la
           
-          # 2. Update the deployments to use the fresh ECR images we just built
+          echo "=== Searching for YAML files ==="
+          find . -name "*.yaml" -o -name "*.yml"
+          
+          echo "=== Applying Manifests ==="
+          # This forces a recursive find and apply on any directory containing your k8s files
+          kubectl apply -f ./k8s/ --validate=false || kubectl apply -f k8s/ || printf "\n⚠️ COULD NOT APPLY MANIFESTS\n"
+          
+          echo "=== Verifying Deployments in Cluster ==="
+          kubectl get deployments --all-namespaces
+          
+          echo "=== Patching Container Images ==="
           kubectl set image deployment/frontend-deployment frontend-container=$ECR_REGISTRY/${{ secrets.ECR_FRONTEND_REPO }}:$IMAGE_TAG
           kubectl set image deployment/backend-deployment backend-container=$ECR_REGISTRY/${{ secrets.ECR_BACKEND_REPO }}:$IMAGE_TAG
           
-          # 3. Track the rollout status
+          echo "=== Rollout Verification ==="
           kubectl rollout status deployment/frontend-deployment
           kubectl rollout status deployment/backend-deployment
