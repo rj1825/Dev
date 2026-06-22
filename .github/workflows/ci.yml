@@ -90,14 +90,13 @@ jobs:
           ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
         run: |
+          # 1. Apply your manifests to create the deployments if they don't exist
+          kubectl apply -f ./path/to/your/k8s-manifests/
+          
+          # 2. Update the deployments to use the fresh ECR images we just built
           kubectl set image deployment/frontend-deployment frontend-container=$ECR_REGISTRY/${{ secrets.ECR_FRONTEND_REPO }}:$IMAGE_TAG
           kubectl set image deployment/backend-deployment backend-container=$ECR_REGISTRY/${{ secrets.ECR_BACKEND_REPO }}:$IMAGE_TAG
           
+          # 3. Track the rollout status
           kubectl rollout status deployment/frontend-deployment
           kubectl rollout status deployment/backend-deployment
-
-      - name: Clean Up Runner IP Rule (Always Executes)
-        if: always()
-        run: |
-          SG_ID=$(aws eks describe-cluster --name three-tier-eks-cluster --region ${{ secrets.AWS_REGION }} --query "cluster.resourcesVpcConfig.clusterSecurityGroupId" --output text)
-          aws ec2 revoke-security-group-ingress --group-id $SG_ID --protocol tcp --port 443 --cidr ${{ steps.ip.outputs.runner_ip }}/32 --region ${{ secrets.AWS_REGION }} || echo "Nothing to clean up"
