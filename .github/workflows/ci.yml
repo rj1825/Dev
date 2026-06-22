@@ -60,6 +60,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Setup Terraform CLI
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
       - name: Install and Initialize Terraform
         run: |
           cd terraform
@@ -75,7 +80,7 @@ jobs:
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
         run: |
           kubectl set image deployment/frontend-deployment frontend-container=$ECR_REGISTRY/${{ secrets.ECR_FRONTEND_REPO }}:$IMAGE_TAG
-          kubectl set image deployment/backend-deployment backend-container=${{ secrets.ECR_BACKEND_REPO }}:$IMAGE_TAG
+          kubectl set image deployment/backend-deployment backend-container=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_BACKEND_REPO }}:$IMAGE_TAG
           
           kubectl rollout status deployment/frontend-deployment
           kubectl rollout status deployment/backend-deployment
