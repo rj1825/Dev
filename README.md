@@ -77,3 +77,4 @@ cd terraform
 terraform destroy -auto-approve
 ```
 *Note: This process takes approximately 5-10 minutes.*
+
